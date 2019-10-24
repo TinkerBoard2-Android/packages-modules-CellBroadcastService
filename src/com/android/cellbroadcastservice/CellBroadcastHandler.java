@@ -25,10 +25,14 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.Activity;
 import android.app.AppOpsManager;
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
+import android.database.Cursor;
 import android.location.Location;
 import android.location.LocationManager;
 import android.location.LocationRequest;
@@ -45,18 +49,23 @@ import android.provider.Telephony;
 import android.provider.Telephony.CellBroadcasts;
 import android.telephony.SmsCbMessage;
 import android.telephony.SubscriptionManager;
+import android.text.TextUtils;
 import android.util.LocalLog;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.CbGeoUtils.Geometry;
 import com.android.internal.telephony.CbGeoUtils.LatLng;
 import com.android.internal.telephony.metrics.TelephonyMetrics;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -73,6 +82,12 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
     /** Uses to request the location update. */
     private final LocationRequester mLocationRequester;
 
+    /** Timestamp of last airplane mode on */
+    private long mLastAirplaneModeTime = 0;
+
+    // Resource cache
+    private final Map<Integer, Resources> mResourcesCache = new HashMap<>();
+
     private CellBroadcastHandler(Context context) {
         this("CellBroadcastHandler", context);
     }
@@ -83,6 +98,19 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                 context,
                 (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE),
                 getHandler());
+
+        mContext.registerReceiver(
+                new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        boolean airplaneModeOn = intent.getBooleanExtra("state", false);
+                        if (airplaneModeOn) {
+                            mLastAirplaneModeTime = System.currentTimeMillis();
+                            log("Airplane mode on. Reset duplicate detection.");
+                        }
+                    }
+                },
+                new IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED));
     }
 
     /**
@@ -106,8 +134,11 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
     @Override
     protected boolean handleSmsMessage(Message message) {
         if (message.obj instanceof SmsCbMessage) {
-            handleBroadcastSms((SmsCbMessage) message.obj);
-            return true;
+            if (!isDuplicate((SmsCbMessage) message.obj)) {
+                handleBroadcastSms((SmsCbMessage) message.obj);
+                return true;
+            }
+            return false;
         } else {
             loge("handleMessage got object of type: " + message.obj.getClass().getName());
             return false;
@@ -154,6 +185,103 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             }
             broadcastMessage(message, uri, slotIndex);
         }
+    }
+
+    /**
+     * Check if the message is a duplicate
+     *
+     * @param message Cell broadcast message
+     * @return {@code true} if this message is a duplicate
+     */
+    @VisibleForTesting
+    public boolean isDuplicate(SmsCbMessage message) {
+        // Find the cell broadcast message identify by the message identifier and serial number
+        // and is not broadcasted.
+        String where = CellBroadcasts.RECEIVED_TIME + ">?";
+
+        int slotIndex = message.getSlotIndex();
+        SubscriptionManager subMgr = (SubscriptionManager) mContext.getSystemService(
+                Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+        int[] subIds = subMgr.getSubscriptionIds(slotIndex);
+        Resources res;
+        if (subIds != null) {
+            res = getResources(subIds[0]);
+        } else {
+            res = getResources(SubscriptionManager.DEFAULT_SUBSCRIPTION_ID);
+        }
+
+        // Only consider cell broadcast messages received within certain period.
+        // By default it's 24 hours.
+        long expirationDuration = res.getInteger(R.integer.message_expiration_time);
+        long dupCheckTime = System.currentTimeMillis() - expirationDuration;
+
+        // Some carriers require reset duplication detection after airplane mode.
+        if (res.getBoolean(R.bool.reset_duplicate_detection_on_airplane_mode)) {
+            dupCheckTime = Long.max(dupCheckTime, mLastAirplaneModeTime);
+        }
+
+        List<SmsCbMessage> cbMessages = new ArrayList<>();
+
+        try (Cursor cursor = mContext.getContentResolver().query(CellBroadcasts.CONTENT_URI,
+                // TODO: QUERY_COLUMNS_FWK is a hidden API, since we are going to move
+                //  CellBroadcastProvider to this module we can define those COLUMNS in side
+                //  CellBroadcastProvider and reference from there.
+                CellBroadcasts.QUERY_COLUMNS_FWK,
+                where,
+                new String[] {Long.toString(dupCheckTime)},
+                null)) {
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    cbMessages.add(SmsCbMessage.createFromCursor(cursor));
+                }
+            }
+        }
+
+        boolean compareMessageBody = res.getBoolean(R.bool.duplicate_compare_body);
+
+        log("Found " + cbMessages.size() + " messages since "
+                + DateFormat.getDateTimeInstance().format(dupCheckTime));
+        for (SmsCbMessage messageToCheck : cbMessages) {
+            // If messages are from different slots, then we only compare the message body.
+            if (message.getSlotIndex() != messageToCheck.getSlotIndex()) {
+                if (TextUtils.equals(message.getMessageBody(), messageToCheck.getMessageBody())) {
+                    log("Duplicate message detected from different slot. " + message);
+                    return true;
+                }
+            } else {
+                // Check serial number if message is from the same carrier.
+                if (message.getSerialNumber() != messageToCheck.getSerialNumber()) {
+                    // Not a dup. Check next one.
+                    log("Serial number check. Not a dup. " + messageToCheck);
+                    continue;
+                }
+
+                if (message.getServiceCategory() != messageToCheck.getServiceCategory()) {
+                    // Not a dup. Check next one.
+                    log("Service category check. Not a dup. " + messageToCheck);
+                    continue;
+                }
+
+                // ETWS primary / secondary should be treated differently.
+                if (message.isEtwsMessage() && messageToCheck.isEtwsMessage()
+                        && message.getEtwsWarningInfo().isPrimary()
+                        != messageToCheck.getEtwsWarningInfo().isPrimary()) {
+                    // Not a dup. Check next one.
+                    log("ETWS primary check. Not a dup. " + messageToCheck);
+                    continue;
+                }
+
+                // Compare message body if needed.
+                if (!compareMessageBody || TextUtils.equals(
+                        message.getMessageBody(), messageToCheck.getMessageBody())) {
+                    log("Duplicate message detected. " + message);
+                    return true;
+                }
+            }
+        }
+
+        log("Not a duplicate message. " + message);
+        return false;
     }
 
     /**
@@ -268,6 +396,29 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             mContext.getContentResolver().update(CellBroadcasts.CONTENT_URI, cv,
                     CellBroadcasts._ID + "=?", new String[] {messageUri.getLastPathSegment()});
         }
+    }
+
+    /**
+     * Get the device resource based on SIM
+     *
+     * @param subId Subscription index
+     *
+     * @return The resource
+     */
+    public @NonNull Resources getResources(int subId) {
+        if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID
+                || !SubscriptionManager.isValidSubscriptionId(subId)) {
+            return mContext.getResources();
+        }
+
+        if (mResourcesCache.containsKey(subId)) {
+            return mResourcesCache.get(subId);
+        }
+
+        Resources res = SubscriptionManager.getResourcesForSubId(mContext, subId);
+        mResourcesCache.put(subId, res);
+
+        return res;
     }
 
     @Override
