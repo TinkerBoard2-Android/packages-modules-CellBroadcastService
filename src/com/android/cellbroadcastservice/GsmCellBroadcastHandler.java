@@ -16,8 +16,6 @@
 
 package com.android.cellbroadcastservice;
 
-import static com.android.internal.telephony.gsm.SmsCbConstants.MESSAGE_ID_CMAS_GEO_FENCING_TRIGGER;
-
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
@@ -219,7 +217,7 @@ public class GsmCellBroadcastHandler extends CellBroadcastHandler {
             if (header == null) return false;
 
             log("header=" + header);
-            if (header.getServiceCategory() == MESSAGE_ID_CMAS_GEO_FENCING_TRIGGER) {
+            if (header.getServiceCategory() == SmsCbConstants.MESSAGE_ID_CMAS_GEO_FENCING_TRIGGER) {
                 GeoFencingTriggerMessage triggerMessage =
                         GsmSmsCbMessage.createGeoFencingTriggerMessage(pdu);
                 if (triggerMessage != null) {

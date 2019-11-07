@@ -59,7 +59,6 @@ import android.util.LocalLog;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.metrics.TelephonyMetrics;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -253,12 +252,6 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
      */
     protected void handleBroadcastSms(SmsCbMessage message) {
         int slotIndex = message.getSlotIndex();
-        // Log Cellbroadcast msg received event
-        TelephonyMetrics metrics = TelephonyMetrics.getInstance();
-        metrics.writeNewCBSms(slotIndex, message.getMessageFormat(),
-                message.getMessagePriority(), message.isCmasMessage(), message.isEtwsMessage(),
-                message.getServiceCategory(), message.getSerialNumber(),
-                System.currentTimeMillis());
 
         // TODO: Database inserting can be time consuming, therefore this should be changed to
         // asynchronous.
