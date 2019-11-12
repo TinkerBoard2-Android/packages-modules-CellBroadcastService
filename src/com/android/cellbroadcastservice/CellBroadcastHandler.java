@@ -40,8 +40,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerExecutor;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
+import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -104,7 +106,7 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
     private final LocationRequester mLocationRequester;
 
     /** Timestamp of last airplane mode on */
-    private long mLastAirplaneModeTime = 0;
+    protected long mLastAirplaneModeTime = 0;
 
     /** Resource cache */
     private final Map<Integer, Resources> mResourcesCache = new HashMap<>();
@@ -119,11 +121,11 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
     private final Map<Integer, Integer> mServiceCategoryCrossRATMap;
 
     private CellBroadcastHandler(Context context) {
-        this("CellBroadcastHandler", context);
+        this("CellBroadcastHandler", context, Looper.myLooper());
     }
 
-    protected CellBroadcastHandler(String debugTag, Context context) {
-        super(debugTag, context);
+    protected CellBroadcastHandler(String debugTag, Context context, Looper looper) {
+        super(debugTag, context, looper);
         mLocationRequester = new LocationRequester(
                 context,
                 (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE),
@@ -320,9 +322,11 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
         long expirationDuration = res.getInteger(R.integer.message_expiration_time);
         long dupCheckTime = System.currentTimeMillis() - expirationDuration;
 
-        // Some carriers require reset duplication detection after airplane mode.
-        if (res.getBoolean(R.bool.reset_duplicate_detection_on_airplane_mode)) {
+        // Some carriers require reset duplication detection after airplane mode or reboot.
+        if (res.getBoolean(R.bool.reset_on_power_cycle_or_airplane_mode)) {
             dupCheckTime = Long.max(dupCheckTime, mLastAirplaneModeTime);
+            dupCheckTime = Long.max(dupCheckTime,
+                    System.currentTimeMillis() - SystemClock.elapsedRealtime());
         }
 
         List<SmsCbMessage> cbMessages = new ArrayList<>();
