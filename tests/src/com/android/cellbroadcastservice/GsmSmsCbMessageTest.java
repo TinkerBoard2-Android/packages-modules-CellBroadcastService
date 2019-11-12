@@ -34,8 +34,6 @@ import java.util.List;
 @RunWith(AndroidTestingRunner.class)
 public class GsmSmsCbMessageTest extends CellBroadcastServiceTestBase {
 
-    private static final String TAG = "GsmSmsCbMessageTest";
-
     @Test
     @SmallTest
     public void testCreateMessageFromBinary() throws Exception {
@@ -62,7 +60,7 @@ public class GsmSmsCbMessageTest extends CellBroadcastServiceTestBase {
         SmsCbMessage msg = GsmSmsCbMessage.createSmsCbMessage(mMockedContext, header, null, pdus,
                 0);
 
-        Log.d(TAG, "msg=" + msg);
+        Log.d("GsmSmsCbMessageTest", "msg=" + msg);
 
         assertEquals(SmsCbMessage.GEOGRAPHICAL_SCOPE_CELL_WIDE_IMMEDIATE,
                 msg.getGeographicalScope());
@@ -99,21 +97,5 @@ public class GsmSmsCbMessageTest extends CellBroadcastServiceTestBase {
             assertEquals(-56.560020446777344,
                     ((Polygon) geometries.get(i * 2 + 1)).getVertices().get(2).lng);
         }
-    }
-
-    @Test
-    @SmallTest
-    public void testCreateTriggerMessage() throws Exception {
-        final byte[] pdu = hexStringToBytes("0001113001010010C0111204D2");
-        GsmSmsCbMessage.GeoFencingTriggerMessage triggerMessage =
-                GsmSmsCbMessage.createGeoFencingTriggerMessage(pdu);
-
-        Log.d(TAG, "trigger message=" + triggerMessage);
-
-        assertEquals(1, triggerMessage.type);
-        assertEquals(1, triggerMessage.cbIdentifiers.size());
-        assertEquals(1234, triggerMessage.cbIdentifiers.get(0).serialNumber);
-        assertEquals(SmsCbConstants.MESSAGE_ID_CMAS_ALERT_PRESIDENTIAL_LEVEL,
-                triggerMessage.cbIdentifiers.get(0).messageIdentifier);
     }
 }

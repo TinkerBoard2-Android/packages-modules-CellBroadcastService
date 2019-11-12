@@ -49,8 +49,6 @@ public class CellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
 
     private CellBroadcastHandler mCellBroadcastHandler;
 
-    private TestableLooper mTestbleLooper;
-
     @Mock
     private Map<Integer, Resources> mMockedResourcesCache;
 
@@ -103,11 +101,7 @@ public class CellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-
-        mTestbleLooper = TestableLooper.get(CellBroadcastHandlerTest.this);
-
-        mCellBroadcastHandler = new CellBroadcastHandler("CellBroadcastHandlerUT",
-                mMockedContext, mTestbleLooper.getLooper());
+        mCellBroadcastHandler = new CellBroadcastHandler("CellBroadcastHandlerUT", mMockedContext);
         ((MockContentResolver) mMockedContext.getContentResolver()).addProvider(
                 Telephony.CellBroadcasts.CONTENT_URI.getAuthority(),
                 new CellBroadcastContentProvider());

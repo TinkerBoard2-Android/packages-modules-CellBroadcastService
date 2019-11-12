@@ -16,29 +16,19 @@
 
 package com.android.cellbroadcastservice;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.res.Resources;
-import android.location.LocationManager;
 import android.os.Handler;
 import android.os.IPowerManager;
 import android.os.PowerManager;
 import android.telephony.SubscriptionManager;
-import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.testing.TestableLooper;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 
 import junit.framework.TestCase;
 
@@ -56,24 +46,15 @@ import java.util.LinkedList;
 public class CellBroadcastServiceTestBase extends TestCase {
 
     @Mock
-    protected Context mMockedContext;
+    Context mMockedContext;
 
     @Mock
-    protected Resources mMockedResources;
+    Resources mMockedResources;
 
     @Mock
-    protected SubscriptionManager mMockedSubscriptionManager;
+    SubscriptionManager mMockedSubscriptionManager;
 
-    @Mock
-    protected TelephonyManager mMockedTelephonyManager;
-
-    @Mock
-    protected LocationManager mMockedLocationManager;
-
-    private final MockContentResolver mMockedContentResolver = new MockContentResolver();
-
-    private final Multimap<String, BroadcastReceiver> mBroadcastReceiversByAction =
-            ArrayListMultimap.create();
+    final MockContentResolver mMockedContentResolver = new MockContentResolver();
 
     private final HashMap<InstanceKey, Object> mOldInstances = new HashMap<>();
 
@@ -116,37 +97,13 @@ public class CellBroadcastServiceTestBase extends TestCase {
         PowerManager powerManager = new PowerManager(mMockedContext, mock(IPowerManager.class),
                 new Handler(TestableLooper.get(CellBroadcastServiceTestBase.this).getLooper()));
         doReturn(powerManager).when(mMockedContext).getSystemService(Context.POWER_SERVICE);
-        doReturn(mMockedTelephonyManager).when(mMockedContext)
-                .getSystemService(Context.TELEPHONY_SERVICE);
         doReturn(mMockedSubscriptionManager).when(mMockedContext)
                 .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
-        doReturn(mMockedLocationManager).when(mMockedContext)
-                .getSystemService(Context.LOCATION_SERVICE);
-        doReturn(mMockedContext).when(mMockedContext).createContextAsUser(any(), anyInt());
         doReturn(new int[]{1}).when(mMockedSubscriptionManager).getSubscriptionIds(anyInt());
-        doReturn(mMockedTelephonyManager).when(mMockedTelephonyManager)
-                .createForSubscriptionId(anyInt());
-        doAnswer(invocation -> {
-            BroadcastReceiver receiver = invocation.getArgument(0);
-            IntentFilter intentFilter = invocation.getArgument(1);
-            for (int i = 0; i < intentFilter.countActions(); i++) {
-                mBroadcastReceiversByAction.put(intentFilter.getAction(i), receiver);
-            }
-            return null;
-        }).when(mMockedContext).registerReceiver(
-                any(BroadcastReceiver.class), any(IntentFilter.class));
     }
 
     protected void tearDown() throws Exception {
         restoreInstances();
-    }
-
-    void sendBroadcast(Intent intent) {
-        if (mBroadcastReceiversByAction.containsKey(intent.getAction())) {
-            for (BroadcastReceiver receiver : mBroadcastReceiversByAction.get(intent.getAction())) {
-                receiver.onReceive(mMockedContext, intent);
-            }
-        }
     }
 
     void putResources(int id, Object value) {
