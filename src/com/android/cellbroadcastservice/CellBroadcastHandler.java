@@ -37,6 +37,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.provider.Telephony;
@@ -65,6 +66,8 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
     private static final String EXTRA_MESSAGE = "message";
 
     private final LocalLog mLocalLog = new LocalLog(100);
+
+    private static final boolean IS_DEBUGGABLE = SystemProperties.getInt("ro.debuggable", 0) == 1;
 
     /** Uses to request the location update. */
     public final LocationRequester mLocationRequester;
