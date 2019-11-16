@@ -48,6 +48,7 @@ import android.provider.Telephony;
 import android.provider.Telephony.CellBroadcasts;
 import android.telephony.SmsCbMessage;
 import android.telephony.SubscriptionManager;
+import android.telephony.cdma.CdmaSmsCbProgramData;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.util.LocalLog;
@@ -66,6 +67,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Dispatch new Cell Broadcasts to receivers. Acquires a private wakelock until the broadcast
@@ -84,8 +87,14 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
     /** Timestamp of last airplane mode on */
     private long mLastAirplaneModeTime = 0;
 
-    // Resource cache
+    /** Resource cache */
     private final Map<Integer, Resources> mResourcesCache = new HashMap<>();
+
+    /**
+     * Service category equivalent map. The key is the GSM service category, the value is the CDMA
+     * service category.
+     */
+    private final Map<Integer, Integer> mServiceCategoryCrossRATMap;
 
     private CellBroadcastHandler(Context context) {
         this("CellBroadcastHandler", context);
@@ -97,6 +106,63 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                 context,
                 (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE),
                 getHandler().getLooper());
+
+        // Adding GSM / CDMA service category mapping.
+        mServiceCategoryCrossRATMap = Stream.of(new Integer[][] {
+                // Presidential alert
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_PRESIDENTIAL_LEVEL,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_PRESIDENTIAL_LEVEL_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT},
+
+                // Extreme alert
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_IMMEDIATE_OBSERVED,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_EXTREME_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_IMMEDIATE_OBSERVED_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_EXTREME_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_IMMEDIATE_LIKELY,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_EXTREME_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_IMMEDIATE_LIKELY_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_EXTREME_THREAT},
+
+                // Severe alert
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_EXPECTED_OBSERVED,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_EXPECTED_OBSERVED_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_EXPECTED_LIKELY,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_EXTREME_EXPECTED_LIKELY_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_IMMEDIATE_OBSERVED,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_IMMEDIATE_OBSERVED_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_IMMEDIATE_LIKELY,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_IMMEDIATE_LIKELY_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_EXPECTED_OBSERVED,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_EXPECTED_OBSERVED_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_EXPECTED_LIKELY,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_SEVERE_EXPECTED_LIKELY_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_SEVERE_THREAT},
+
+                // Amber alert
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_CHILD_ABDUCTION_EMERGENCY,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_CHILD_ABDUCTION_EMERGENCY},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_CHILD_ABDUCTION_EMERGENCY_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_CHILD_ABDUCTION_EMERGENCY},
+
+                // Monthly test alert
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_REQUIRED_MONTHLY_TEST,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_TEST_MESSAGE},
+                { SmsCbConstants.MESSAGE_ID_CMAS_ALERT_REQUIRED_MONTHLY_TEST_LANGUAGE,
+                        CdmaSmsCbProgramData.CATEGORY_CMAS_TEST_MESSAGE},
+        }).collect(Collectors.toMap(data -> data[0], data -> data[1]));
 
         mContext.registerReceiver(
                 new BroadcastReceiver() {
@@ -255,16 +321,23 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                     continue;
                 }
 
-                if (message.getServiceCategory() != messageToCheck.getServiceCategory()) {
+                // ETWS primary / secondary should be treated differently.
+                if (message.isEtwsMessage() && messageToCheck.isEtwsMessage()
+                        && message.getEtwsWarningInfo().isPrimary()
+                        != messageToCheck.getEtwsWarningInfo().isPrimary()) {
                     // Not a dup. Check next one.
                     log("Service category check. Not a dup. " + messageToCheck);
                     continue;
                 }
 
-                // ETWS primary / secondary should be treated differently.
-                if (message.isEtwsMessage() && messageToCheck.isEtwsMessage()
-                        && message.getEtwsWarningInfo().isPrimary()
-                        != messageToCheck.getEtwsWarningInfo().isPrimary()) {
+                // Check if the message category is different. Some carriers send cell broadcast
+                // messages on different techs (i.e. GSM / CDMA), so we need to compare service
+                // category cross techs.
+                if (message.getServiceCategory() != messageToCheck.getServiceCategory()
+                        && mServiceCategoryCrossRATMap.get(message.getServiceCategory())
+                        != messageToCheck.getServiceCategory()
+                        && mServiceCategoryCrossRATMap.get(messageToCheck.getServiceCategory())
+                        != message.getServiceCategory()) {
                     // Not a dup. Check next one.
                     log("ETWS primary check. Not a dup. " + messageToCheck);
                     continue;
