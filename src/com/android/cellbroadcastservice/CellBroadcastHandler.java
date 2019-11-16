@@ -77,6 +77,23 @@ import java.util.stream.Stream;
 public class CellBroadcastHandler extends WakeLockStateMachine {
     private static final String EXTRA_MESSAGE = "message";
 
+    /**
+     * To disable cell broadcast duplicate detection for debugging purposes
+     * <code>adb shell am broadcast -a com.android.cellbroadcastservice.action.DUPLICATE_DETECTION
+     * --ez enable false</code>
+     *
+     * To enable cell broadcast duplicate detection for debugging purposes
+     * <code>adb shell am broadcast -a com.android.cellbroadcastservice.action.DUPLICATE_DETECTION
+     * --ez enable true</code>
+     */
+    private static final String ACTION_DUPLICATE_DETECTION =
+            "com.android.cellbroadcastservice.action.DUPLICATE_DETECTION";
+
+    /**
+     * The extra for cell broadcast duplicate detection enable/disable
+     */
+    private static final String EXTRA_ENABLE = "enable";
+
     private final LocalLog mLocalLog = new LocalLog(100);
 
     private static final boolean IS_DEBUGGABLE = SystemProperties.getInt("ro.debuggable", 0) == 1;
@@ -89,6 +106,9 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
 
     /** Resource cache */
     private final Map<Integer, Resources> mResourcesCache = new HashMap<>();
+
+    /** Whether performing duplicate detection or not. Note this is for debugging purposes only. */
+    private boolean mEnableDuplicateDetection = true;
 
     /**
      * Service category equivalent map. The key is the GSM service category, the value is the CDMA
@@ -164,18 +184,31 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                         CdmaSmsCbProgramData.CATEGORY_CMAS_TEST_MESSAGE},
         }).collect(Collectors.toMap(data -> data[0], data -> data[1]));
 
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+        if (Build.IS_DEBUGGABLE) {
+            intentFilter.addAction(ACTION_DUPLICATE_DETECTION);
+        }
         mContext.registerReceiver(
                 new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
-                        boolean airplaneModeOn = intent.getBooleanExtra("state", false);
-                        if (airplaneModeOn) {
-                            mLastAirplaneModeTime = System.currentTimeMillis();
-                            log("Airplane mode on. Reset duplicate detection.");
+                        switch (intent.getAction()) {
+                            case Intent.ACTION_AIRPLANE_MODE_CHANGED:
+                                boolean airplaneModeOn = intent.getBooleanExtra("state", false);
+                                if (airplaneModeOn) {
+                                    mLastAirplaneModeTime = System.currentTimeMillis();
+                                    log("Airplane mode on. Reset duplicate detection.");
+                                }
+                                break;
+                            case ACTION_DUPLICATE_DETECTION:
+                                mEnableDuplicateDetection = intent.getBooleanExtra(EXTRA_ENABLE,
+                                        true);
+                                break;
                         }
+
                     }
-                },
-                new IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED));
+                }, intentFilter);
     }
 
     /**
@@ -260,6 +293,11 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
      */
     @VisibleForTesting
     public boolean isDuplicate(SmsCbMessage message) {
+        if (!mEnableDuplicateDetection) {
+            log("Duplicate detection was disabled for debugging purposes.");
+            return false;
+        }
+
         // Find the cell broadcast message identify by the message identifier and serial number
         // and is not broadcasted.
         String where = CellBroadcasts.RECEIVED_TIME + ">?";
