@@ -27,12 +27,12 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.telephony.CbGeoUtils.Geometry;
 import android.telephony.CbGeoUtils.LatLng;
+import android.telephony.Rlog;
 import android.telephony.SmsCbLocation;
 import android.telephony.SmsCbMessage;
 import android.telephony.SmsMessage;
 import android.telephony.SubscriptionManager;
 import android.util.Pair;
-import android.util.Slog;
 
 import com.android.cellbroadcastservice.CbGeoUtils.Circle;
 import com.android.cellbroadcastservice.CbGeoUtils.Polygon;
@@ -138,7 +138,7 @@ public class GsmSmsCbMessage {
                 } catch (Exception ex) {
                     // Catch the exception here, the message will be considered as having no WAC
                     // information which means the message will be broadcasted directly.
-                    Slog.e(TAG, "Can't parse warning area coordinates, ex = " + ex.toString());
+                    Rlog.e(TAG, "Can't parse warning area coordinates, ex = " + ex.toString());
                 }
             }
 
@@ -205,7 +205,7 @@ public class GsmSmsCbMessage {
             }
             return new GeoFencingTriggerMessage(type, cbIdentifiers);
         } catch (Exception ex) {
-            Slog.e(TAG, "create geo-fencing trigger failed, ex = " + ex.toString());
+            Rlog.e(TAG, "create geo-fencing trigger failed, ex = " + ex.toString());
             return null;
         }
     }

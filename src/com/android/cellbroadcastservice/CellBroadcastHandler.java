@@ -45,13 +45,13 @@ import android.provider.Telephony;
 import android.provider.Telephony.CellBroadcasts;
 import android.telephony.CbGeoUtils.Geometry;
 import android.telephony.CbGeoUtils.LatLng;
+import android.telephony.Rlog;
 import android.telephony.SmsCbMessage;
 import android.telephony.SubscriptionManager;
 import android.telephony.cdma.CdmaSmsCbProgramData;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.util.LocalLog;
-import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 
@@ -643,10 +643,10 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
 
         private void requestLocationUpdateInternal(@NonNull LocationUpdateCallback callback,
                 int maximumWaitTimeSec) {
-            if (DBG) Log.d(TAG, "requestLocationUpdate");
+            if (DBG) Rlog.d(TAG, "requestLocationUpdate");
             if (!isLocationServiceAvailable()) {
                 if (DBG) {
-                    Log.d(TAG, "Can't request location update because of no location permission");
+                    Rlog.d(TAG, "Can't request location update because of no location permission");
                 }
                 callback.onLocationUpdate(null);
                 return;
@@ -711,14 +711,14 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             public void handleMessage(Message msg) {
                 switch (msg.what) {
                     case EVENT_LOCATION_REQUEST_TIMEOUT:
-                        if (DBG) Log.d(TAG, "location request timeout");
+                        if (DBG) Rlog.d(TAG, "location request timeout");
                         onLocationUpdate(null);
                         break;
                     case EVENT_REQUEST_LOCATION_UPDATE:
                         requestLocationUpdateInternal((LocationUpdateCallback) msg.obj, msg.arg1);
                         break;
                     default:
-                        Log.e(TAG, "Unsupported message type " + msg.what);
+                        Rlog.e(TAG, "Unsupported message type " + msg.what);
                 }
             }
         }
