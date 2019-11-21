@@ -33,7 +33,6 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.provider.Telephony;
 import android.telephony.SmsCbCmasInfo;
-import android.telephony.SmsCbLocation;
 import android.telephony.SmsCbMessage;
 import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
@@ -77,6 +76,7 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
                 mc.addRow(new Object[]{
                         1,              // _ID
                         0,              // SLOT_INDEX
+                        1,              // SUB_ID
                         0,              // GEOGRAPHICAL_SCOPE
                         "311480",       // PLMN
                         0,              // LAC
@@ -157,14 +157,6 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
     @After
     public void tearDown() throws Exception {
         super.tearDown();
-    }
-
-    private SmsCbMessage createSmsCbMessage(int serialNumber, int serviceCategory,
-                                            String messageBody) {
-        return new SmsCbMessage(SmsCbMessage.MESSAGE_FORMAT_3GPP,
-                0, serialNumber, new SmsCbLocation(),
-                serviceCategory, "en", messageBody, 3,
-                null, null, 0);
     }
 
     @Test
