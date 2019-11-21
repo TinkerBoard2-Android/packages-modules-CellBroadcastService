@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.cellbroadcastservice;
+package com.android.cellbroadcastservice.tests;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -44,6 +44,11 @@ import android.test.suitebuilder.annotation.SmallTest;
 import android.testing.AndroidTestingRunner;
 import android.testing.TestableLooper;
 import android.text.format.DateUtils;
+
+import com.android.cellbroadcastservice.CellBroadcastHandler;
+import com.android.cellbroadcastservice.CellBroadcastProvider;
+import com.android.cellbroadcastservice.GsmCellBroadcastHandler;
+import com.android.cellbroadcastservice.SmsCbConstants;
 
 import org.junit.After;
 import org.junit.Before;
@@ -154,8 +159,9 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
         doReturn(mMockedResources).when(mMockedResourcesCache).get(anyInt());
         replaceInstance(CellBroadcastHandler.class, "mResourcesCache",
                 mGsmCellBroadcastHandler, mMockedResourcesCache);
-        putResources(R.integer.message_expiration_time, 86400000);
-        putResources(com.android.internal.R.array.config_defaultCellBroadcastReceiverPkgs,
+        putResources(com.android.cellbroadcastservice.R.integer.message_expiration_time, 86400000);
+        putResources(
+                com.android.cellbroadcastservice.R.array.config_defaultCellBroadcastReceiverPkgs,
                 new String[]{"fake.cellbroadcast.pkg"});
     }
 
@@ -196,7 +202,8 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
     @Test
     @SmallTest
     public void testAirplaneModeReset() {
-        putResources(R.bool.reset_on_power_cycle_or_airplane_mode, true);
+        putResources(com.android.cellbroadcastservice.R.bool.reset_on_power_cycle_or_airplane_mode,
+                true);
         Intent intent = new Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED);
         intent.putExtra("state", true);
         // Send fake airplane mode on event.
