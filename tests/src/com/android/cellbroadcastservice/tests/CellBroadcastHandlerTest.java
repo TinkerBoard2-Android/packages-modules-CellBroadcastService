@@ -69,6 +69,7 @@ public class CellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
                 mc.addRow(new Object[]{
                         1,              // _ID
                         0,              // SLOT_INDEX
+                        1,              // SUB_ID
                         0,              // GEOGRAPHICAL_SCOPE
                         "311480",       // PLMN
                         0,              // LAC
@@ -133,7 +134,7 @@ public class CellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
         return new SmsCbMessage(SmsCbMessage.MESSAGE_FORMAT_3GPP,
                 0, serialNumber, new SmsCbLocation(),
                 serviceCategory, "en", messageBody, 3,
-                null, null, 0);
+                null, null, 0, 1);
     }
 
     @Test
