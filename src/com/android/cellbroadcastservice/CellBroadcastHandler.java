@@ -434,9 +434,9 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
      * @param phoneId the phoneId to use
      * @return the associated sub id
      */
-    protected int getSubIdForPhone(int phoneId) {
+    protected static int getSubIdForPhone(Context context, int phoneId) {
         SubscriptionManager subMan =
-                (SubscriptionManager) mContext.getSystemService(
+                (SubscriptionManager) context.getSystemService(
                         Context.TELEPHONY_SUBSCRIPTION_SERVICE);
         int[] subIds = subMan.getSubscriptionIds(phoneId);
         if (subIds != null) {
@@ -444,6 +444,19 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
         } else {
             return SubscriptionManager.INVALID_SUBSCRIPTION_ID;
         }
+    }
+
+    /**
+     * Put the phone ID and sub ID into an intent as extras.
+     */
+    public static void putPhoneIdAndSubIdExtra(Context context, Intent intent, int phoneId) {
+        int subId = getSubIdForPhone(context, phoneId);
+        if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+            intent.putExtra("subscription", subId);
+            intent.putExtra(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, subId);
+        }
+        intent.putExtra("phone", phoneId);
+        intent.putExtra(SubscriptionManager.EXTRA_SLOT_INDEX, phoneId);
     }
 
     /**
@@ -468,13 +481,7 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             appOp = AppOpsManager.OPSTR_RECEIVE_EMERGENCY_BROADCAST;
 
             intent.putExtra(EXTRA_MESSAGE, message);
-            int subId = getSubIdForPhone(slotIndex);
-            if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                intent.putExtra("subscription", subId);
-                intent.putExtra(SubscriptionManager.EXTRA_SUBSCRIPTION_INDEX, subId);
-            }
-            intent.putExtra("phone", slotIndex);
-            intent.putExtra(SubscriptionManager.EXTRA_SLOT_INDEX, slotIndex);
+            putPhoneIdAndSubIdExtra(mContext, intent, slotIndex);
 
             if (IS_DEBUGGABLE) {
                 // Send additional broadcast intent to the specified package. This is only for sl4a
@@ -517,7 +524,7 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             appOp = AppOpsManager.OPSTR_RECEIVE_SMS;
 
             intent.putExtra(EXTRA_MESSAGE, message);
-            SubscriptionManager.putPhoneIdAndSubIdExtra(intent, slotIndex);
+            putPhoneIdAndSubIdExtra(mContext, intent, slotIndex);
 
             mReceiverCount.incrementAndGet();
             mContext.createContextAsUser(UserHandle.ALL, 0).sendOrderedBroadcast(
