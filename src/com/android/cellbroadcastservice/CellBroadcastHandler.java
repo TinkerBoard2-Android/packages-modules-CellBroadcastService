@@ -454,7 +454,7 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
     protected void broadcastMessage(@NonNull SmsCbMessage message, @Nullable Uri messageUri,
             int slotIndex) {
         String receiverPermission;
-        String appOp;
+        int appOp;
         String msg;
         Intent intent;
         if (message.isEmergencyMessage()) {
@@ -465,7 +465,7 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             //Emergency alerts need to be delivered with high priority
             intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
             receiverPermission = Manifest.permission.RECEIVE_EMERGENCY_BROADCAST;
-            appOp = AppOpsManager.OPSTR_RECEIVE_EMERGENCY_BROADCAST;
+            appOp = AppOpsManager.OP_RECEIVE_EMERGECY_SMS;
 
             intent.putExtra(EXTRA_MESSAGE, message);
             int subId = getSubIdForPhone(slotIndex);
@@ -486,9 +486,9 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                     Intent additionalIntent = new Intent(intent);
                     for (String pkg : testPkgs) {
                         additionalIntent.setPackage(pkg);
-                        mContext.createContextAsUser(UserHandle.ALL, 0).sendOrderedBroadcast(
-                                additionalIntent, receiverPermission, appOp, null, getHandler(),
-                                Activity.RESULT_OK, null, null);
+                        mContext.sendOrderedBroadcastAsUser(additionalIntent, UserHandle.ALL,
+                                receiverPermission, appOp, null, getHandler(), Activity.RESULT_OK,
+                                null, null);
                     }
                 }
             }
@@ -500,9 +500,8 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                 for (String pkg : pkgs) {
                     // Explicitly send the intent to all the configured cell broadcast receivers.
                     intent.setPackage(pkg);
-                    mContext.createContextAsUser(UserHandle.ALL, 0).sendOrderedBroadcast(
-                            intent, receiverPermission, appOp, null, getHandler(),
-                            Activity.RESULT_OK, null, null);
+                    mContext.sendOrderedBroadcastAsUser(intent, UserHandle.ALL, receiverPermission,
+                            appOp, null, mReceiver, getHandler(), Activity.RESULT_OK, null, null);
                 }
             }
         } else {
@@ -514,15 +513,14 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             // this intent.
             intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
             receiverPermission = Manifest.permission.RECEIVE_SMS;
-            appOp = AppOpsManager.OPSTR_RECEIVE_SMS;
+            appOp = AppOpsManager.OP_RECEIVE_SMS;
 
             intent.putExtra(EXTRA_MESSAGE, message);
             SubscriptionManager.putPhoneIdAndSubIdExtra(intent, slotIndex);
 
             mReceiverCount.incrementAndGet();
-            mContext.createContextAsUser(UserHandle.ALL, 0).sendOrderedBroadcast(
-                    intent, receiverPermission, appOp, mReceiver, getHandler(),
-                    Activity.RESULT_OK, null, null);
+            mContext.sendOrderedBroadcastAsUser(intent, UserHandle.ALL, receiverPermission,
+                    appOp, null, mReceiver, getHandler(), Activity.RESULT_OK, null, null);
         }
 
         if (messageUri != null) {
