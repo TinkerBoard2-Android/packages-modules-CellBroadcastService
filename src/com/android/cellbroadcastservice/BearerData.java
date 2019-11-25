@@ -21,8 +21,6 @@ import android.telephony.SmsCbCmasInfo;
 import android.telephony.cdma.CdmaSmsCbProgramData;
 import android.util.Log;
 
-import com.android.internal.util.BitwiseInputStream;
-
 /**
  * An object to decode CDMA SMS bearer data.
  */
