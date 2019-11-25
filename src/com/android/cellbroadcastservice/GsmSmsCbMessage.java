@@ -37,7 +37,7 @@ import com.android.cellbroadcastservice.CbGeoUtils.Circle;
 import com.android.cellbroadcastservice.CbGeoUtils.Polygon;
 import com.android.cellbroadcastservice.GsmSmsCbMessage.GeoFencingTriggerMessage.CellBroadcastIdentity;
 import com.android.cellbroadcastservice.SmsCbHeader.DataCodingScheme;
-import com.android.internal.R;
+import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -66,7 +66,8 @@ public class GsmSmsCbMessage {
      * @param category ETWS message category defined in SmsCbConstants
      * @return ETWS text message in string. Return an empty string if no match.
      */
-    private static String getEtwsPrimaryMessage(Context context, int category) {
+    @VisibleForTesting
+    public static String getEtwsPrimaryMessage(Context context, int category) {
         final Resources r = context.getResources();
         switch (category) {
             case ETWS_WARNING_TYPE_EARTHQUAKE:
