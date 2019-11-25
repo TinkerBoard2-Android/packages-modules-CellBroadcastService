@@ -18,23 +18,79 @@ package com.android.cellbroadcastservice;
 
 import android.telephony.CbGeoUtils;
 import android.telephony.SmsCbCmasInfo;
+import android.telephony.SmsCbEtwsInfo;
 import android.telephony.SmsCbMessage;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.testing.AndroidTestingRunner;
+import android.testing.TestableLooper;
 import android.util.Log;
 
 import com.android.cellbroadcastservice.CbGeoUtils.Circle;
 import com.android.cellbroadcastservice.CbGeoUtils.Polygon;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.List;
 
 @RunWith(AndroidTestingRunner.class)
+@TestableLooper.RunWithLooper
 public class GsmSmsCbMessageTest extends CellBroadcastServiceTestBase {
 
     private static final String TAG = "GsmSmsCbMessageTest";
+
+    @Before
+    public void setUp() throws Exception {
+        super.setUp();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        super.tearDown();
+    }
+
+    @Test
+    @SmallTest
+    public void testGetEtwsPrimaryMessage() {
+        String testMessage1 = "Testmessage1";
+        String testMessage2 = "Testmessage2";
+        String testMessage3 = "Testmessage3";
+        String testMessage4 = "Testmessage4";
+        String testMessage5 = "Testmessage5";
+
+        putResources(R.string.etws_primary_default_message_earthquake, testMessage1);
+        putResources(R.string.etws_primary_default_message_tsunami, testMessage2);
+        putResources(R.string.etws_primary_default_message_earthquake_and_tsunami, testMessage3);
+        putResources(R.string.etws_primary_default_message_test, testMessage4);
+        putResources(R.string.etws_primary_default_message_others, testMessage5);
+
+        String message = GsmSmsCbMessage.getEtwsPrimaryMessage(mMockedContext,
+                SmsCbEtwsInfo.ETWS_WARNING_TYPE_EARTHQUAKE);
+        Log.d("GsmSmsCbMessageTest", "earthquake message=" + message);
+        assertEquals(testMessage1, message);
+
+        message = GsmSmsCbMessage.getEtwsPrimaryMessage(mMockedContext,
+                SmsCbEtwsInfo.ETWS_WARNING_TYPE_TSUNAMI);
+        Log.d("GsmSmsCbMessageTest", "tsunami message=" + message);
+        assertEquals(testMessage2, message);
+
+        message = GsmSmsCbMessage.getEtwsPrimaryMessage(mMockedContext,
+                SmsCbEtwsInfo.ETWS_WARNING_TYPE_EARTHQUAKE_AND_TSUNAMI);
+        Log.d("GsmSmsCbMessageTest", "earthquake and tsunami message=" + message);
+        assertEquals(testMessage3, message);
+
+        message = GsmSmsCbMessage.getEtwsPrimaryMessage(mMockedContext,
+                SmsCbEtwsInfo.ETWS_WARNING_TYPE_TEST_MESSAGE);
+        Log.d("GsmSmsCbMessageTest", "test message=" + message);
+        assertEquals(testMessage4, message);
+
+        message = GsmSmsCbMessage.getEtwsPrimaryMessage(mMockedContext,
+                SmsCbEtwsInfo.ETWS_WARNING_TYPE_OTHER_EMERGENCY);
+        Log.d("GsmSmsCbMessageTest", "others message=" + message);
+        assertEquals(testMessage5, message);
+    }
 
     @Test
     @SmallTest
