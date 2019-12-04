@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 
-package com.android.cellbroadcastservice;
+package com.android.cellbroadcastservice.tests;
 
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 import android.content.ContentValues;
-import android.content.Intent;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
-import android.os.Bundle;
-import android.provider.Settings;
 import android.provider.Telephony;
 import android.telephony.SmsCbCmasInfo;
+import android.telephony.SmsCbLocation;
 import android.telephony.SmsCbMessage;
 import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
@@ -41,22 +35,25 @@ import android.testing.AndroidTestingRunner;
 import android.testing.TestableLooper;
 import android.text.format.DateUtils;
 
+import com.android.cellbroadcastservice.CellBroadcastHandler;
+import com.android.cellbroadcastservice.CellBroadcastProvider;
+import com.android.cellbroadcastservice.SmsCbConstants;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 import java.util.Map;
 
 @RunWith(AndroidTestingRunner.class)
 @TestableLooper.RunWithLooper
-public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
+public class CellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
 
-    private GsmCellBroadcastHandler mGsmCellBroadcastHandler;
+    private CellBroadcastHandler mCellBroadcastHandler;
 
-    private TestableLooper mTestableLooper;
+    private TestableLooper mTestbleLooper;
 
     @Mock
     private Map<Integer, Resources> mMockedResourcesCache;
@@ -64,13 +61,9 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
     private class CellBroadcastContentProvider extends MockContentProvider {
         @Override
         public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
-                            String sortOrder) {
+                String sortOrder) {
 
-            // Assume the message was received 2 hours ago.
-            long receivedTime = System.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS * 2;
-
-            if (uri.compareTo(Telephony.CellBroadcasts.CONTENT_URI) == 0
-                    && Long.parseLong(selectionArgs[selectionArgs.length - 1]) <= receivedTime) {
+            if (uri.compareTo(Telephony.CellBroadcasts.CONTENT_URI) == 0) {
                 MatrixCursor mc = new MatrixCursor(CellBroadcastProvider.QUERY_COLUMNS);
 
                 mc.addRow(new Object[]{
@@ -94,8 +87,8 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
                         0,              // CMAS_SEVERITY
                         0,              // CMAS_URGENCY
                         0,              // CMAS_CERTAINTY
-                        receivedTime,
-                        false,          // MESSAGE_BROADCASTED
+                        System.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS * 2,
+                        true,           // MESSAGE_BROADCASTED
                         "",             // GEOMETRIES
                         5,              // MAXIMUM_WAIT_TIME
                 });
@@ -110,48 +103,25 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
         public int update(Uri url, ContentValues values, String where, String[] whereArgs) {
             return 1;
         }
-
-        @Override
-        public Uri insert(Uri uri, ContentValues values) {
-            return null;
-        }
-
-    }
-
-    private class SettingsProvider extends MockContentProvider {
-        @Override
-        public Bundle call(String method, String arg, Bundle extras) {
-            return null;
-        }
-
-        @Override
-        public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
-                            String sortOrder) {
-            return null;
-        }
     }
 
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        mTestableLooper = TestableLooper.get(GsmCellBroadcastHandlerTest.this);
 
-        mGsmCellBroadcastHandler = new GsmCellBroadcastHandler(mMockedContext,
-                mTestableLooper.getLooper());
-        mGsmCellBroadcastHandler.start();
+        mTestbleLooper = TestableLooper.get(CellBroadcastHandlerTest.this);
 
+        mCellBroadcastHandler = new CellBroadcastHandler("CellBroadcastHandlerUT",
+                mMockedContext, mTestbleLooper.getLooper());
         ((MockContentResolver) mMockedContext.getContentResolver()).addProvider(
                 Telephony.CellBroadcasts.CONTENT_URI.getAuthority(),
                 new CellBroadcastContentProvider());
-        ((MockContentResolver) mMockedContext.getContentResolver()).addProvider(
-                Settings.AUTHORITY, new SettingsProvider());
         doReturn(true).when(mMockedResourcesCache).containsKey(anyInt());
         doReturn(mMockedResources).when(mMockedResourcesCache).get(anyInt());
-        replaceInstance(CellBroadcastHandler.class, "mResourcesCache",
-                mGsmCellBroadcastHandler, mMockedResourcesCache);
-        putResources(R.integer.message_expiration_time, 86400000);
-        putResources(com.android.internal.R.array.config_defaultCellBroadcastReceiverPkgs,
-                new String[]{"fake.cellbroadcast.pkg"});
+        replaceInstance(CellBroadcastHandler.class, "mResourcesCache", mCellBroadcastHandler,
+                mMockedResourcesCache);
+        putResources(com.android.cellbroadcastservice.R.integer.message_expiration_time,
+                (int) DateUtils.DAY_IN_MILLIS);
     }
 
     @After
@@ -159,40 +129,40 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
         super.tearDown();
     }
 
-    @Test
-    @SmallTest
-    public void testTriggerMessage() throws Exception {
-        final byte[] pdu = hexStringToBytes("0001113001010010C0111204D2");
-        mGsmCellBroadcastHandler.onGsmCellBroadcastSms(0, pdu);
-        mTestableLooper.processAllMessages();
-
-        ArgumentCaptor<Intent> captor = ArgumentCaptor.forClass(Intent.class);
-        verify(mMockedContext).sendOrderedBroadcast(captor.capture(), anyString(), anyString(),
-                any(), any(), anyInt(), any(), any());
-        Intent intent = captor.getValue();
-        assertEquals(Telephony.Sms.Intents.ACTION_SMS_EMERGENCY_CB_RECEIVED, intent.getAction());
-        SmsCbMessage msg = intent.getParcelableExtra("message");
-
-        assertEquals(SmsCbConstants.MESSAGE_ID_CMAS_ALERT_PRESIDENTIAL_LEVEL,
-                msg.getServiceCategory());
-        assertEquals(1234, msg.getSerialNumber());
-        assertEquals("Test Message", msg.getMessageBody());
+    private SmsCbMessage createSmsCbMessage(int serialNumber, int serviceCategory,
+            String messageBody) {
+        return new SmsCbMessage(SmsCbMessage.MESSAGE_FORMAT_3GPP,
+                0, serialNumber, new SmsCbLocation(),
+                serviceCategory, "en", messageBody, 3,
+                null, null, 0, 1);
     }
 
     @Test
     @SmallTest
-    public void testAirplaneModeReset() {
-        putResources(R.bool.reset_on_power_cycle_or_airplane_mode, true);
-        Intent intent = new Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED);
-        intent.putExtra("state", true);
-        // Send fake airplane mode on event.
-        sendBroadcast(intent);
+    public void testDuplicate() throws Exception {
+        SmsCbMessage msg = createSmsCbMessage(1234, 4370, "msg");
+        assertTrue(mCellBroadcastHandler.isDuplicate(msg));
+    }
 
-        final byte[] pdu = hexStringToBytes("0001113001010010C0111204D2");
-        mGsmCellBroadcastHandler.onGsmCellBroadcastSms(0, pdu);
-        mTestableLooper.processAllMessages();
+    @Test
+    @SmallTest
+    public void testNotDuplicateSerialDifferent() throws Exception {
+        SmsCbMessage msg = createSmsCbMessage(1235, 4370, "msg");
+        assertFalse(mCellBroadcastHandler.isDuplicate(msg));
+    }
 
-        verify(mMockedContext, never()).sendOrderedBroadcast(any(), anyString(), anyString(),
-                any(), any(), anyInt(), any(), any());
+    @Test
+    @SmallTest
+    public void testNotDuplicateServiceCategoryDifferent() throws Exception {
+        SmsCbMessage msg = createSmsCbMessage(1234, 4371, "msg");
+        assertFalse(mCellBroadcastHandler.isDuplicate(msg));
+    }
+
+    @Test
+    @SmallTest
+    public void testNotDuplicateMessageBodyDifferent() throws Exception {
+        putResources(com.android.cellbroadcastservice.R.bool.duplicate_compare_body, true);
+        SmsCbMessage msg = createSmsCbMessage(1234, 4370, "msg");
+        assertFalse(mCellBroadcastHandler.isDuplicate(msg));
     }
 }
