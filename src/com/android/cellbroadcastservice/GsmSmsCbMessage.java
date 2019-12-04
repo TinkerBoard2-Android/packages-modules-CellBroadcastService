@@ -498,7 +498,11 @@ public class GsmSmsCbMessage {
             return type == TYPE_ACTIVE_ALERT_SHARE_WAC;
         }
 
-        static final class CellBroadcastIdentity {
+        /**
+         * The GSM cell broadcast identity
+         */
+        @VisibleForTesting
+        public static final class CellBroadcastIdentity {
             public final int messageIdentifier;
             public final int serialNumber;
             CellBroadcastIdentity(int messageIdentifier, int serialNumber) {
