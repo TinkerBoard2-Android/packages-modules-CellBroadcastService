@@ -18,7 +18,6 @@ package com.android.cellbroadcastservice.tests;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -31,7 +30,6 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.UserHandle;
 import android.provider.Settings;
 import android.provider.Telephony;
 import android.telephony.SmsCbCmasInfo;
@@ -175,8 +173,8 @@ public class GsmCellBroadcastHandlerTest extends CellBroadcastServiceTestBase {
         mTestableLooper.processAllMessages();
 
         ArgumentCaptor<Intent> captor = ArgumentCaptor.forClass(Intent.class);
-        verify(mMockedContext).sendOrderedBroadcastAsUser(captor.capture(), eq(UserHandle.ALL),
-                anyString(), anyInt(), any(), any(), any(), anyInt(), any(), any());
+        verify(mMockedContext).sendOrderedBroadcast(captor.capture(), anyString(), anyString(),
+                any(), any(), anyInt(), any(), any());
         Intent intent = captor.getValue();
         assertEquals(Telephony.Sms.Intents.ACTION_SMS_EMERGENCY_CB_RECEIVED, intent.getAction());
         SmsCbMessage msg = intent.getParcelableExtra("message");
