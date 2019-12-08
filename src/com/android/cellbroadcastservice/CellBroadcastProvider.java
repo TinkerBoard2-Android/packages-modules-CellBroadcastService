@@ -31,6 +31,7 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.Process;
 import android.provider.Telephony.CellBroadcasts;
+import android.telephony.Rlog;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -179,7 +180,7 @@ public class CellBroadcastProvider extends ContentProvider {
         checkReadPermission(uri);
 
         if (DBG) {
-            Log.d(TAG, "query:"
+            Rlog.d(TAG, "query:"
                     + " uri = " + uri
                     + " projection = " + Arrays.toString(projection)
                     + " selection = " + selection
@@ -219,7 +220,7 @@ public class CellBroadcastProvider extends ContentProvider {
         checkWritePermission();
 
         if (DBG) {
-            Log.d(TAG, "insert:"
+            Rlog.d(TAG, "insert:"
                     + " uri = " + uri
                     + " contentValue = " + values);
         }
@@ -234,7 +235,7 @@ public class CellBroadcastProvider extends ContentProvider {
                             .notifyChange(CONTENT_URI, null /* observer */);
                     return newUri;
                 } else {
-                    Log.e(TAG, "Insert record failed because of unknown reason, uri = " + uri);
+                    Rlog.e(TAG, "Insert record failed because of unknown reason, uri = " + uri);
                     return null;
                 }
             default:
@@ -248,7 +249,7 @@ public class CellBroadcastProvider extends ContentProvider {
         checkWritePermission();
 
         if (DBG) {
-            Log.d(TAG, "delete:"
+            Rlog.d(TAG, "delete:"
                     + " uri = " + uri
                     + " selection = " + selection
                     + " selectionArgs = " + Arrays.toString(selectionArgs));
@@ -269,7 +270,7 @@ public class CellBroadcastProvider extends ContentProvider {
         checkWritePermission();
 
         if (DBG) {
-            Log.d(TAG, "update:"
+            Rlog.d(TAG, "update:"
                     + " uri = " + uri
                     + " values = {" + values + "}"
                     + " selection = " + selection
@@ -376,12 +377,12 @@ public class CellBroadcastProvider extends ContentProvider {
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
             if (DBG) {
-                Log.d(TAG, "onUpgrade: oldV=" + oldVersion + " newV=" + newVersion);
+                Rlog.d(TAG, "onUpgrade: oldV=" + oldVersion + " newV=" + newVersion);
             }
             if (oldVersion < 2) {
                 db.execSQL("ALTER TABLE " + CELL_BROADCASTS_TABLE_NAME + " ADD COLUMN "
                         + CellBroadcasts.SLOT_INDEX + " INTEGER DEFAULT 0;");
-                Log.d(TAG, "add slotIndex column");
+                Rlog.d(TAG, "add slotIndex column");
             }
         }
     }
