@@ -16,7 +16,6 @@
 
 package com.android.cellbroadcastservice;
 
-import android.annotation.UnsupportedAppUsage;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -55,7 +54,6 @@ public abstract class WakeLockStateMachine extends StateMachine {
     /** Broadcast not required due to geo-fencing check */
     static final int EVENT_BROADCAST_NOT_REQUIRED = 4;
 
-    @UnsupportedAppUsage
     protected Context mContext;
 
     protected AtomicInteger mReceiverCount = new AtomicInteger(0);
@@ -64,7 +62,6 @@ public abstract class WakeLockStateMachine extends StateMachine {
     private static final int WAKE_LOCK_TIMEOUT = 3000;
 
     private final DefaultState mDefaultState = new DefaultState();
-    @UnsupportedAppUsage
     private final IdleState mIdleState = new IdleState();
     private final WaitingState mWaitingState = new WaitingState();
 
@@ -236,7 +233,6 @@ public abstract class WakeLockStateMachine extends StateMachine {
      * Log with debug level.
      * @param s the string to log
      */
-    @UnsupportedAppUsage
     @Override
     protected void log(String s) {
         Rlog.d(getName(), s);
