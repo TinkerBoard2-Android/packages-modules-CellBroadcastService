@@ -142,7 +142,7 @@ public class DefaultCellBroadcastService extends CellBroadcastService {
 
         return new SmsCbMessage(SmsCbMessage.MESSAGE_FORMAT_3GPP2,
                 SmsCbMessage.GEOGRAPHICAL_SCOPE_PLMN_WIDE, bData.messageId, location,
-                serviceCategory, bData.getLanguage(), bData.userData.payloadStr,
+                serviceCategory, bData.getLanguage(), 0, bData.userData.payloadStr,
                 bData.priority, null, bData.cmasWarningInfo, 0, null, System.currentTimeMillis(),
                 slotIndex, subId);
     }
