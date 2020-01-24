@@ -18,6 +18,7 @@ package com.android.cellbroadcastservice;
 
 import static com.android.cellbroadcastservice.CellBroadcastStatsLog.CELL_BROADCAST_MESSAGE_ERROR__TYPE__CDMA_DECODING_ERROR;
 
+import android.annotation.NonNull;
 import android.content.Context;
 import android.os.Bundle;
 import android.telephony.CellBroadcastService;
@@ -106,6 +107,12 @@ public class DefaultCellBroadcastService extends CellBroadcastService {
                 CellBroadcastStatsLog.CELL_BROADCAST_MESSAGE_REPORTED__TYPE__CDMA_SPC);
         mCdmaScpHandler.onCdmaScpMessage(slotIndex, new ArrayList<>(programData),
                 originatingAddress, callback);
+    }
+
+    @Override
+    public @NonNull String getCellBroadcastAreaInfo(int slotIndex) {
+        Log.d(TAG, "getCellBroadcastAreaInfo on slotId=" + slotIndex);
+        return mGsmCellBroadcastHandler.getCellBroadcastAreaInfo(slotIndex);
     }
 
     /**
