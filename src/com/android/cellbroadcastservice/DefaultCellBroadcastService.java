@@ -16,6 +16,7 @@
 
 package com.android.cellbroadcastservice;
 
+import android.annotation.NonNull;
 import android.content.Context;
 import android.os.Bundle;
 import android.telephony.CellBroadcastService;
@@ -98,6 +99,12 @@ public class DefaultCellBroadcastService extends CellBroadcastService {
         Log.d(TAG, "onCdmaScpMessage received message on slotId=" + slotIndex);
         mCdmaScpHandler.onCdmaScpMessage(slotIndex, new ArrayList<>(programData),
                 originatingAddress, callback);
+    }
+
+    @Override
+    public @NonNull String getCellBroadcastAreaInfo(int slotIndex) {
+        Log.d(TAG, "getCellBroadcastAreaInfo on slotId=" + slotIndex);
+        return mGsmCellBroadcastHandler.getCellBroadcastAreaInfo(slotIndex);
     }
 
     /**
