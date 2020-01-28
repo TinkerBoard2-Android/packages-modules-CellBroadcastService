@@ -518,18 +518,13 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             mLocalLog.log(msg);
             // Send implicit intent since there are various 3rd party carrier apps listen to
             // this intent.
-            intent = new Intent(Telephony.Sms.Intents.SMS_CB_RECEIVED_ACTION);
             receiverPermission = Manifest.permission.RECEIVE_SMS;
             appOp = AppOpsManager.OPSTR_RECEIVE_SMS;
 
-            intent.putExtra(EXTRA_MESSAGE, message);
-            putPhoneIdAndSubIdExtra(mContext, intent, slotIndex);
-
             mReceiverCount.incrementAndGet();
-            CellBroadcastIntents.sendOrderedBroadcastForBackgroundReceivers(
-                    mContext, UserHandle.ALL, intent,
-                    receiverPermission, appOp, mReceiver, getHandler(), Activity.RESULT_OK,
-                    null, null);
+            CellBroadcastIntents.sendSmsCbReceivedBroadcast(
+                    mContext, UserHandle.ALL, message, mReceiver, getHandler(), Activity.RESULT_OK,
+                    slotIndex);
         }
 
         if (messageUri != null) {
