@@ -28,8 +28,10 @@ import static com.android.cellbroadcastservice.CellBroadcastStatsLog.CELL_BROADC
 import android.annotation.NonNull;
 import android.content.Context;
 import android.content.res.Resources;
+import android.telephony.CbGeoUtils.Circle;
 import android.telephony.CbGeoUtils.Geometry;
 import android.telephony.CbGeoUtils.LatLng;
+import android.telephony.CbGeoUtils.Polygon;
 import android.telephony.SmsCbLocation;
 import android.telephony.SmsCbMessage;
 import android.telephony.SmsMessage;
@@ -37,8 +39,6 @@ import android.telephony.SubscriptionManager;
 import android.util.Log;
 import android.util.Pair;
 
-import com.android.cellbroadcastservice.CbGeoUtils.Circle;
-import com.android.cellbroadcastservice.CbGeoUtils.Polygon;
 import com.android.cellbroadcastservice.GsmSmsCbMessage.GeoFencingTriggerMessage.CellBroadcastIdentity;
 import com.android.cellbroadcastservice.SmsCbHeader.DataCodingScheme;
 import com.android.internal.annotations.VisibleForTesting;
