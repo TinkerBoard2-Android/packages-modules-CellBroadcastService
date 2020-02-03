@@ -134,7 +134,11 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                 case ACTION_DUPLICATE_DETECTION:
                     mEnableDuplicateDetection = intent.getBooleanExtra(EXTRA_ENABLE,
                             true);
+                    log("Duplicate detection " + (mEnableDuplicateDetection
+                            ? "enabled" : "disabled"));
                     break;
+                default:
+                    log("Unhandled broadcast " + intent.getAction());
             }
         }
     };
@@ -520,8 +524,8 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                     // Explicitly send the intent to all the configured cell broadcast receivers.
                     intent.setPackage(pkg);
                     mContext.createContextAsUser(UserHandle.ALL, 0).sendOrderedBroadcast(
-                            intent, receiverPermission, appOp, mReceiver, getHandler(),
-                            Activity.RESULT_OK, null, null);
+                            intent, receiverPermission, appOp, mOrderedBroadcastReceiver,
+                            getHandler(), Activity.RESULT_OK, null, null);
                 }
             }
         } else {
@@ -530,13 +534,11 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
             mLocalLog.log(msg);
             // Send implicit intent since there are various 3rd party carrier apps listen to
             // this intent.
-            receiverPermission = Manifest.permission.RECEIVE_SMS;
-            appOp = AppOpsManager.OPSTR_RECEIVE_SMS;
 
             mReceiverCount.incrementAndGet();
             CellBroadcastIntents.sendSmsCbReceivedBroadcast(
-                    mContext, UserHandle.ALL, message, mReceiver, getHandler(), Activity.RESULT_OK,
-                    slotIndex);
+                    mContext, UserHandle.ALL, message, mOrderedBroadcastReceiver, getHandler(),
+                    Activity.RESULT_OK, slotIndex);
         }
 
         if (messageUri != null) {
