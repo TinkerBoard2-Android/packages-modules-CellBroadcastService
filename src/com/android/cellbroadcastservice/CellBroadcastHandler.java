@@ -347,7 +347,6 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                 // Check serial number if message is from the same carrier.
                 if (message.getSerialNumber() != messageToCheck.getSerialNumber()) {
                     // Not a dup. Check next one.
-                    log("Serial number check. Not a dup. " + messageToCheck);
                     continue;
                 }
 
@@ -356,7 +355,6 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                         && message.getEtwsWarningInfo().isPrimary()
                         != messageToCheck.getEtwsWarningInfo().isPrimary()) {
                     // Not a dup. Check next one.
-                    log("ETWS primary check. Not a dup. " + messageToCheck);
                     continue;
                 }
 
@@ -370,7 +368,6 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                                 messageToCheck.getServiceCategory()),
                         message.getServiceCategory())) {
                     // Not a dup. Check next one.
-                    log("Service category check. Not a dup. " + messageToCheck);
                     continue;
                 }
 
