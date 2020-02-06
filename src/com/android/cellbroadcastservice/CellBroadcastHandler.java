@@ -411,6 +411,13 @@ public class CellBroadcastHandler extends WakeLockStateMachine {
                     + " serialNumber = " + message.getSerialNumber());
         }
 
+        if (uri != null) {
+            ContentValues cv = new ContentValues();
+            cv.put(CellBroadcasts.LOCATION_CHECK_TIME, System.currentTimeMillis());
+            mContext.getContentResolver().update(CellBroadcasts.CONTENT_URI, cv,
+                    CellBroadcasts._ID + "=?", new String[] {uri.getLastPathSegment()});
+        }
+
         for (Geometry geo : broadcastArea) {
             if (geo.contains(location)) {
                 broadcastMessage(message, uri, slotIndex);
