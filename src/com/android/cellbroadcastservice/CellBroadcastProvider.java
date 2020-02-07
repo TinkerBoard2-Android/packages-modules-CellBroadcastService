@@ -27,8 +27,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.os.Binder;
-import android.os.Process;
 import android.provider.Telephony.CellBroadcasts;
 import android.text.TextUtils;
 import android.util.Log;
@@ -39,9 +37,9 @@ import java.util.Arrays;
 
 /**
  * The content provider that provides access of cell broadcast message to application.
- * Permission {@link android.permission.READ_CELL_BROADCASTS} is required for querying the cell
- * broadcast message. Only phone process has the permission to write/update the database via this
- * provider.
+ * Permission {@link com.android.cellbroadcastservice.FULL_ACCESS_CELL_BROADCAST_HISTORY} is
+ * required for querying the cell broadcast message. Only the Cell Broadcast module should have this
+ * permission.
  */
 public class CellBroadcastProvider extends ContentProvider {
     /** Interface for read/write permission check. */
@@ -403,18 +401,22 @@ public class CellBroadcastProvider extends ContentProvider {
     private class CellBroadcastPermissionChecker implements PermissionChecker {
         @Override
         public boolean hasWritePermission() {
-            // Only the phone and network statck process has the write permission to modify this
-            // provider.
-            return Binder.getCallingUid() == Process.PHONE_UID
-                    || Binder.getCallingUid() == Process.NETWORK_STACK_UID;
+            int status = getContext().checkCallingOrSelfPermission(
+                    "com.android.cellbroadcastservice.FULL_ACCESS_CELL_BROADCAST_HISTORY");
+            if (status == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+            return false;
         }
 
         @Override
         public boolean hasReadPermission() {
-            // Only the phone and network stack process has the read permission to query data from
-            // this provider.
-            return Binder.getCallingUid() == Process.PHONE_UID
-                    || Binder.getCallingUid() == Process.NETWORK_STACK_UID;
+            int status = getContext().checkCallingOrSelfPermission(
+                    "com.android.cellbroadcastservice.FULL_ACCESS_CELL_BROADCAST_HISTORY");
+            if (status == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+            return false;
         }
 
         @Override
