@@ -22,6 +22,14 @@
 
     <original-package android:name="com.android.cellbroadcastservice" />
 
+    <!-- gives the permission holder access to the CellBroadcastProvider.
+      TODO(b/149115145): This permission should have protectionLevel="signature" but currently in
+      AOSP the CellBroadcastReceiverApp is signed with the networkstack certificate while the
+      CellBroadcastService is still using the platform cert.
+      Once the certs match we can mark this permission "signature" and prevent other apps from
+      using it but for now we just leave the permission open. -->
+    <permission android:name="com.android.cellbroadcastservice.FULL_ACCESS_CELL_BROADCAST_HISTORY" />
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_EMERGENCY_BROADCAST" />
